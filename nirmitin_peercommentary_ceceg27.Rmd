@@ -1,0 +1,116 @@
+---
+title: "nirmitin_OriginalHomeworkCode_05"
+author: "Nirmiti Naik"
+date: "11/10/2021"
+output: 
+  html_document:
+    toc: TRUE
+    toc_depth: 3
+    toc_float: TRUE
+---
+<br> 
+The boot package is installed so that the command boot() function will work.
+```{r}
+library(boot)
+```
+
+# **Challenge 1**
+**Using the “KamilarAndCooperData.csv” dataset, run a linear regression looking at log(HomeRange_km2) in relation to log(Body_mass_female_mean) and report your β coeffiecients (slope and intercept)**
+<br> 
+First, I'm going to load the Kamilar and Cooper dataset.
+```{r load data}
+library(curl)
+f <- curl("https://raw.githubusercontent.com/fuzzyatelin/fuzzyatelin.github.io/master/AN588_Fall21/KamilarAndCooperData.csv")
+d <- read.csv(f, header = TRUE, sep = ",", stringsAsFactors = FALSE)
+head(d)
+```
+
+Next, I will run a linear regression on log(HomeRange_km2) and log(Body_mass_female_mean). This informs us of our β coeffiecients: β1 = 1.036 and β0 = -9.441
+```{r linear regression}
+loglm <- lm(log(HomeRange_km2) ~ log(Body_mass_female_mean), data = d)
+loglm
+```
+#cece: remember to remove NAs, you can use "na.action = na.exclude". Otherwise looks good
+
+# **Challenge 2**
+**Then, use bootstrapping to sample from your data 1000 times with replacement, each time fitting the same model and calculating the same coefficients. This generates a sampling distribution for each β coefficient.**
+<br> 
+I couldn't find where in the modules we discussed boot strapping so I consulted this external source that has an example for writing a function for bootstrapping: https://www.statmethods.net/advstats/bootstrapping.html. The format of the boot() is boot(data, statistic, R) so we need to write a function to assign to the statistic parameter
+```{r bootstrap function}
+# function to obtain fit the model and calculate coefficients from the data
+bootstrap <- function(data, indices) {
+  d <- data[indices,] # allows boot to select sample
+  # what we want function to perform is same as challenge 1
+  fit <- lm(log(HomeRange_km2) ~ log(Body_mass_female_mean), data = d) 
+  # return β coefficients
+  return(coef(fit))
+}
+```
+#Cece: This is the method I used as well, looks good!
+
+Now, we will create a sample through bootstrapping by using boot() and applying the function written above. This sampling distribution tells us that t1 = -9.441 and t2 = 1.036
+```{r generate bootstrap sample}
+bootobject <- boot(data = d, statistic = bootstrap, R = 1000)
+bootobject
+```
+
+#Cece: Looks good, very similar to what I got!
+
+**Estimate the standard error for each of your β coefficients as the standard deviation of the sampling distribution from your bootstrap and determine the 95% CI for each of your β coefficients based on the appropriate quantiles from your sampling distribution.**
+
+From the bootstrapped sample distribution above, the standard deviation (i.e. the standard error for the β coefficients) is: SEβ1 = 0.0791 & SEβ0  =0.6087. Now, I'll use the boot.ci() function to determine the 95% CI. β1 95% CI: (0.881, 1.191) & β0 95% CI: (-10.622,  -8.236)**
+
+I'm not sure what type of interval we should be using, I just used 'norm' for the moment. I previously had the issue of not being able to figure out how to find the 95% CI for both variables since it would only output the 95% of β1 but I looked at this stackoverflow page (https://stackoverflow.com/questions/31813228/bootstrap-confidence-intervals-for-more-than-one-statistics-through-boot-ci-func) to see that the automatic default is to index the first variable. So, to determine the 95% CI of both my variables I called boot.ci() twice: each time indexing a different element of the**
+
+```{r 95% CI}
+c <-boot.ci(boot.out = bootobject, conf = 0.95, type = 'norm', index = 1)
+c
+d <- boot.ci(boot.out = bootobject, conf = 0.95, type = 'norm', index = 2)
+d
+```
+
+#Cece: I struggled on this part as I was only able to get B0 and not B1 so this is really helpful! I also chose "norm". Just remember to name each function and then call the name of that function, not boot.ci. When you call boot.ci it just brings up the code associated with that funcion. I renamed them above so I could see their output. 
+**How does the former compare to the SE estimated from your entire dataset using the formula for standard error implemented in lm()?**
+
+Both the lm() generated and bootstrapped β coefficients were equal - does this mean that the SEs are also the same? I'm not too sure how to interpret this since the lm() function only gave the coefficients while the bootstrapped distribution had the SE in addition to the coefficients.
+
+**How does the latter compare to the 95% CI estimated from your entire dataset?**
+
+To make this comparison, I'll calculate the 95% CI of the lm() calculations. lm() implemented data: β0 -> (-10.77, -8.11) & β1 -> (0.8686, 1.204) // and from above, bootstrap implemented data: β0 -> (-10.622,  -8.236 ) & β1 -> (0.881, 1.191) For lm() β0, the 95% CI spans 2.66 while for boot() β0, the 95% CI spans 2.386 - therefore, the 95% CI of the bootstrapped distribution is tighter. For lm() β1, the 95% CI spans 0.3354 while for boot() β1, the 95% CI spans 0.31 - therefore, the 95% CI of the bootstrapped distribution is tighter.
+
+```{r}
+ci <- confint(loglm, level = 0.95)  # using the results of lm()
+ci
+```
+
+#Cece: Looks good
+
+# **Extra Credit**
+Arguments:
++ d = data frame
++ m = linear model
++ conf.level = CI with default = 0.95
++ n = = # of replicates with default = 1000
+```{r}
+extra <- function(d, m, conf.level = 0.95, n = 1000) {
+  # β coefficient names
+  names(d)
+  
+  # β coefficients 
+  d$coefficients
+  
+  # SE (https://stat.ethz.ch/pipermail/r-help/2006-September/113115.html)
+  summary(d)$coefficients[,2]
+  
+  # Upper and lower CI for the linear model based on your entire dataset
+  confint(d, level = 0.95)
+  
+  # mean β coefficient estimates
+  
+  # mean β coefficient SE
+  
+  # mean β coefficient CI limits based on your bootstrap
+}
+```
+#Cece: I have no idea how to do the extra credit so kudos to you for giving it a shot. Also make sure to add the challeges you faced at the end of the document for the final push. 
+# **Extra Extra Credit**
