@@ -79,6 +79,8 @@ ci <- confint(loglm, level = 0.95)  # using the results of lm()
 ci
 ```
 
+*great work!*
+
 # **Extra Credit - not completed, tried to defined some elements to better understand it**
 Arguments:
 + d = data frame
@@ -106,3 +108,5 @@ extra <- function(d, m, conf.level = 0.95, n = 1000) {
   # mean β coefficient CI limits based on your bootstrap
 }
 ```
+
+*will need to use the boot function (or a loop) somewhere in your function!*
